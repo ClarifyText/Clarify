@@ -20,29 +20,7 @@
     font-align: center;
     font-size: 20px;
 }
-textarea {
-  /* Size and Shape */
-  width: 70%;
-  max-width: 60px;
-  height: 150px;
-  padding: 12px;
-  
-  /* Borders and Edges */
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  
-  /* Typography */
-  font-family: inherit;
-  font-size: 1600px;
-  line-height: 1.5;
-  color: #266a57;
-}
 
-body{
-    color: #185E3F;
-    background-color: #F2F2F2;
-}
-h1{
     color:#258B7F;
     background-color: #F2F2F2;
 }

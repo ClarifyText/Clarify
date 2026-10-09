@@ -1,0 +1,192 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Clarify turns long text into clear summaries and study terms.">
+  <title>Clarify — Make text make sense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}" aria-label="Clarify home">
+      <span class="brand-mark" aria-hidden="true">C</span>
+      <span>clarify<span class="brand-period">.</span></span>
+    </a>
+    <div class="topbar-note"><span class="status-dot"></span> Your study space</div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero">
+      <div class="eyebrow"><span class="eyebrow-line"></span> READ LESS. UNDERSTAND MORE.</div>
+      <h1>Make complex text<br><span>make sense.</span></h1>
+      <p class="hero-copy">Paste your notes, a textbook section, or an article. Clarify helps you find the main ideas and key terms to study.</p>
+    </section>
+
+    <section class="workspace" aria-labelledby="input-heading">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">STEP 01</p>
+          <h2 id="input-heading">Add your text</h2>
+        </div>
+        <span class="quiet-label">Paste or upload a .txt file</span>
+      </div>
+
+      {% if error %}
+        <div class="alert" role="alert">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" id="clarify-form">
+        <label class="sr-only" for="text-input">Text to summarize</label>
+        <textarea id="text-input" name="text" maxlength="30000" placeholder="Paste the text you want to understand...">{{ input_text }}</textarea>
+        <div class="input-meta">
+          <span id="character-count">{{ input_text|length }} / 30,000 characters</span>
+          <button class="text-button" type="button" id="clear-button">Clear text</button>
+        </div>
+
+        <div class="form-bottom">
+          <label class="upload-control" for="text-file">
+            <span class="upload-icon" aria-hidden="true">↑</span>
+            <span id="upload-label">Choose .txt file</span>
+            <input id="text-file" name="text_file" type="file" accept=".txt,text/plain">
+          </label>
+          <label class="length-control" for="length">
+            <span>Summary size</span>
+            <select id="length" name="length">
+              <option value="quick" {% if selected_length == 'quick' %}selected{% endif %}>Quick</option>
+              <option value="balanced" {% if selected_length == 'balanced' %}selected{% endif %}>Balanced</option>
+              <option value="detailed" {% if selected_length == 'detailed' %}selected{% endif %}>Detailed</option>
+            </select>
+          </label>
+          <button class="primary-button" type="submit"><span>Clarify text</span><span aria-hidden="true">→</span></button>
+        </div>
+        <p class="small-note">Tip: include the full passage so the summary and key terms have enough context.</p>
+      </form>
+    </section>
+
+    {% if result %}
+    <section class="results" aria-labelledby="results-heading">
+      <div class="results-title-row">
+        <div>
+          <p class="step-label">STEP 02</p>
+          <h2 id="results-heading">Your study notes</h2>
+        </div>
+        <span class="result-chip"><span class="status-dot"></span> Ready to review</span>
+      </div>
+
+      <article class="result-card summary-card">
+        <div class="card-heading">
+          <div class="card-icon summary-icon" aria-hidden="true">✳</div>
+          <div><h3>Summary</h3><p>The main ideas, in fewer words.</p></div>
+          <button class="secondary-button copy-button" type="button" data-copy="summary-output">Copy</button>
+        </div>
+        <div class="summary-content" id="summary-output">{{ result.summary }}</div>
+      </article>
+
+      <div class="results-grid">
+        <article class="result-card terms-card">
+          <div class="card-heading">
+            <div class="card-icon terms-icon" aria-hidden="true">⌕</div>
+            <div><h3>Key terms</h3><p>Words worth remembering.</p></div>
+          </div>
+          {% if result.key_terms %}
+            <div class="term-list">
+              {% for item in result.key_terms %}
+              <div class="term-item">
+                <span class="term-name">{{ item.term }}</span>
+                {% if item.context %}<p>{{ item.context }}</p>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="empty-state">No key terms were found in this passage.</p>
+          {% endif %}
+        </article>
+
+        <article class="result-card definitions-card">
+          <div class="card-heading">
+            <div class="card-icon definitions-icon" aria-hidden="true">≡</div>
+            <div><h3>Definitions</h3><p>Definitions stated in your text.</p></div>
+          </div>
+          {% if result.definitions %}
+            <div class="definition-list">
+              {% for item in result.definitions %}
+              <div class="definition-item">
+                <h4>{{ item.term }}</h4>
+                <p>{{ item.definition }}</p>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <p>No direct definitions were detected in this passage.</p>
+              <span>Clarify only lists definitions it can find in your text. Look for wording such as “X is…”, “X means…”, or “X refers to…”.</span>
+            </div>
+          {% endif %}
+        </article>
+      </div>
+      <p class="honesty-note">Study tip: check these notes against your textbook. Key-term context is taken from the original passage; it is not always a formal definition.</p>
+    </section>
+    {% endif %}
+
+    <footer class="footer">
+      <span class="footer-brand">clarify.</span>
+      <span>Understand the idea. Remember what matters.</span>
+    </footer>
+  </main>
+
+  <script>
+    const textInput = document.getElementById('text-input');
+    const characterCount = document.getElementById('character-count');
+    const clearButton = document.getElementById('clear-button');
+    const fileInput = document.getElementById('text-file');
+    const uploadLabel = document.getElementById('upload-label');
+    const form = document.getElementById('clarify-form');
+
+    function updateCharacterCount() {
+      characterCount.textContent = `${textInput.value.length.toLocaleString()} / 30,000 characters`;
+    }
+
+    textInput.addEventListener('input', updateCharacterCount);
+    clearButton.addEventListener('click', () => {
+      textInput.value = '';
+      fileInput.value = '';
+      uploadLabel.textContent = 'Choose .txt file';
+      updateCharacterCount();
+      textInput.focus();
+    });
+
+    fileInput.addEventListener('change', () => {
+      uploadLabel.textContent = fileInput.files.length ? fileInput.files[0].name : 'Choose .txt file';
+    });
+
+    form.addEventListener('submit', (event) => {
+      if (!textInput.value.trim() && !fileInput.files.length) {
+        event.preventDefault();
+        textInput.focus();
+        alert('Paste some text or choose a .txt file first.');
+      }
+    });
+
+    document.querySelectorAll('[data-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const target = document.getElementById(button.dataset.copy);
+        if (!target) return;
+        try {
+          await navigator.clipboard.writeText(target.innerText.trim());
+          button.textContent = 'Copied!';
+          window.setTimeout(() => { button.textContent = 'Copy'; }, 1400);
+        } catch (error) {
+          button.textContent = 'Select text';
+        }
+      });
+    });
+
+    updateCharacterCount();
+  </script>
+</body>
+</html>

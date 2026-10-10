@@ -6,7 +6,10 @@ import threading
 import time
 import uuid
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+
+from io import BytesIO
+from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
+
 from summarizer import analyze_text
 
 app = Flask(__name__)
@@ -195,14 +198,7 @@ def show_result(job_id):
         result = job["result"]
         selected_length = job["selected_length"]
 
-    return render_template(
-        "index.html",
-        input_text=input_text,
-        result=result,
-        error=None,
-        selected_length=selected_length,
-    )
-
+    
 
 @app.route("/health", methods=["GET"])
 def health():

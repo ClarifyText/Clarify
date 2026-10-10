@@ -20,6 +20,7 @@
       <span class="brand-mark" aria-hidden="true">C</span>
       <span>clarify<span class="brand-period">.</span></span>
     </a>
+
     <div class="topbar-note">
       <span class="status-dot"></span>
       Your study space
@@ -27,7 +28,6 @@
   </header>
 
   <main class="page-shell">
-
     <section class="hero">
       <div class="eyebrow">
         <span class="eyebrow-line"></span>
@@ -43,7 +43,6 @@
     </section>
 
     <section class="workspace" aria-labelledby="input-heading">
-
       <div class="section-heading">
         <div>
           <p class="step-label">STEP 01</p>
@@ -81,7 +80,6 @@
         </div>
 
         <div class="form-bottom">
-
           <label class="upload-control" for="text-file">
             <span class="upload-icon" aria-hidden="true">↑</span>
             <span id="upload-label">Choose .txt file</span>
@@ -96,15 +94,9 @@
           <label class="length-control" for="length">
             <span>Summary size</span>
             <select id="length" name="length">
-              <option value="quick" {% if selected_length == 'quick' %}selected{% endif %}>
-                Quick
-              </option>
-              <option value="balanced" {% if selected_length == 'balanced' %}selected{% endif %}>
-                Balanced
-              </option>
-              <option value="detailed" {% if selected_length == 'detailed' %}selected{% endif %}>
-                Detailed
-              </option>
+              <option value="quick" {% if selected_length == 'quick' %}selected{% endif %}>Quick</option>
+              <option value="balanced" {% if selected_length == 'balanced' %}selected{% endif %}>Balanced</option>
+              <option value="detailed" {% if selected_length == 'detailed' %}selected{% endif %}>Detailed</option>
             </select>
           </label>
 
@@ -119,7 +111,6 @@
         </p>
       </form>
 
-      <!-- Processing status -->
       <section
         class="processing-panel"
         id="processing-panel"
@@ -143,16 +134,14 @@
         </div>
 
         <p class="processing-tip" id="processing-tip">
-          The first request can take longer while Clarify downloads and loads
-          the AI model. Later requests may be faster while the model remains loaded.
+          Short and very long texts use a fast source-based summary.
+          Medium-length texts may use the AI model and take longer.
         </p>
       </section>
-
     </section>
 
     {% if result %}
     <section class="results" aria-labelledby="results-heading">
-
       <div class="results-title-row">
         <div>
           <p class="step-label">STEP 02</p>
@@ -174,20 +163,28 @@
             <p>The main ideas, in fewer words.</p>
           </div>
 
-          <button
-            class="secondary-button copy-button"
-            type="button"
-            data-copy="summary-output"
-          >
-            Copy
-          </button>
+          <div class="summary-actions">
+            <a
+              class="secondary-button download-button"
+              href="{{ url_for('download_result', job_id=result_job_id) }}"
+            >
+              Download notes ↓
+            </a>
+
+            <button
+              class="secondary-button copy-button"
+              type="button"
+              data-copy="summary-output"
+            >
+              Copy summary
+            </button>
+          </div>
         </div>
 
         <div class="summary-content" id="summary-output">{{ result.summary }}</div>
       </article>
 
       <div class="results-grid">
-
         <article class="result-card terms-card">
           <div class="card-heading">
             <div class="card-icon terms-icon" aria-hidden="true">⌕</div>
@@ -202,7 +199,6 @@
             {% for item in result.key_terms %}
             <div class="term-item">
               <span class="term-name">{{ item.term }}</span>
-
               {% if item.context %}
               <p>{{ item.context }}</p>
               {% endif %}
@@ -210,9 +206,7 @@
             {% endfor %}
           </div>
           {% else %}
-          <p class="empty-state">
-            No key terms were found in this passage.
-          </p>
+          <p class="empty-state">No key terms were found in this passage.</p>
           {% endif %}
         </article>
 
@@ -244,14 +238,12 @@
           </div>
           {% endif %}
         </article>
-
       </div>
 
       <p class="honesty-note">
         Study tip: check these notes against your textbook. Key-term context
         is taken from the original passage; it is not always a formal definition.
       </p>
-
     </section>
     {% endif %}
 
@@ -259,7 +251,6 @@
       <span class="footer-brand">clarify.</span>
       <span>Understand the idea. Remember what matters.</span>
     </footer>
-
   </main>
 
   <script>
@@ -288,10 +279,8 @@
 
     function setBusy(busy) {
       submitButton.disabled = busy;
-
       submitButton.querySelector('span:first-child').textContent =
         busy ? 'Clarifying…' : 'Clarify text';
-
       submitButton.querySelector('span:last-child').textContent =
         busy ? '…' : '→';
     }
@@ -313,20 +302,16 @@
         if (info.status === 'done') {
           processingStage.textContent =
             'Finished! Opening your study notes…';
-
           window.location.assign(info.result_url);
           return;
         }
 
         if (info.status === 'error') {
           setBusy(false);
-
           showError(
             info.error ||
             'Clarify could not process this text. Please try again.'
           );
-
-          processingPanel.hidden = false;
           processingStage.textContent = 'Processing stopped.';
           return;
         }
@@ -335,15 +320,12 @@
           () => pollProgress(progressUrl),
           900
         );
-
       } catch (error) {
         setBusy(false);
-
         showError(
           error.message ||
           'The connection was interrupted. Please try again.'
         );
-
         processingStage.textContent =
           'Unable to read the processing status.';
       }
@@ -365,7 +347,6 @@
 
       processingPanel.hidden = false;
       processingStage.textContent = 'Sending your text to Clarify…';
-
       setBusy(true);
 
       processingPanel.scrollIntoView({
@@ -388,10 +369,8 @@
         }
 
         await pollProgress(data.progress_url);
-
       } catch (error) {
         setBusy(false);
-
         showError(
           error.message || 'Clarify could not start. Please try again.'
         );
@@ -403,7 +382,6 @@
       fileInput.value = '';
       uploadLabel.textContent = 'Choose .txt file';
       updateCharacterCount();
-
       clientError.hidden = true;
       textInput.focus();
     });
@@ -417,18 +395,15 @@
     document.querySelectorAll('[data-copy]').forEach((button) => {
       button.addEventListener('click', async () => {
         const target = document.getElementById(button.dataset.copy);
-
         if (!target) return;
 
         try {
           await navigator.clipboard.writeText(target.innerText.trim());
-
           button.textContent = 'Copied!';
 
           window.setTimeout(() => {
-            button.textContent = 'Copy';
+            button.textContent = 'Copy summary';
           }, 1400);
-
         } catch (error) {
           button.textContent = 'Select text';
         }

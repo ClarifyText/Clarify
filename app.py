@@ -5,10 +5,17 @@ import os
 import threading
 import time
 import uuid
-
-
 from io import BytesIO
-from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
+
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 
 from summarizer import analyze_text
 
@@ -17,24 +24,31 @@ app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
 MAX_TEXT_CHARACTERS = 30_000
 JOB_TTL_SECONDS = 60 * 60
+
 _jobs = {}
 _jobs_lock = threading.Lock()
 
 
 def _clean_old_jobs():
+    """Remove expired jobs from memory."""
     cutoff = time.time() - JOB_TTL_SECONDS
+
     with _jobs_lock:
         expired = [
-            job_id for job_id, job in _jobs.items()
+            job_id
+            for job_id, job in _jobs.items()
             if job.get("updated_at", job.get("created_at", 0)) < cutoff
         ]
+
         for job_id in expired:
             _jobs.pop(job_id, None)
 
 
 def _set_job_stage(job_id, stage, progress=None):
+    """Update the processing message and the Render logs."""
     with _jobs_lock:
         job = _jobs.get(job_id)
+
         if not job:
             return
 
@@ -51,19 +65,27 @@ def _set_job_stage(job_id, stage, progress=None):
 
 
 def _run_analysis_job(job_id, text, selected_length):
+    """Analyze text in a background thread."""
     try:
-        _set_job_stage(job_id, "Finding key terms in your text…", 10)
+        _set_job_stage(
+            job_id,
+            "Finding key terms in your text…",
+            10,
+        )
 
         result = analyze_text(
             text,
             selected_length,
             progress_callback=lambda stage, progress: _set_job_stage(
-                job_id, stage, progress
+                job_id,
+                stage,
+                progress,
             ),
         )
 
         with _jobs_lock:
             job = _jobs.get(job_id)
+
             if job:
                 job["result"] = result
                 job["status"] = "done"
@@ -78,6 +100,7 @@ def _run_analysis_job(job_id, text, selected_length):
 
         with _jobs_lock:
             job = _jobs.get(job_id)
+
             if job:
                 job["status"] = "error"
                 job["stage"] = "Clarify encountered a problem."
@@ -91,6 +114,7 @@ def _run_analysis_job(job_id, text, selected_length):
 
 @app.route("/", methods=["GET"])
 def index():
+    """Display the main page."""
     return render_template(
         "index.html",
         input_text="",
@@ -102,6 +126,7 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def start_analysis():
+    """Validate submitted text and start background processing."""
     text = (request.form.get("text") or "").strip()
     selected_length = request.form.get("length", "balanced")
     uploaded_file = request.files.get("text_file")
@@ -113,7 +138,8 @@ def start_analysis():
             ), 400
 
         text = uploaded_file.read().decode(
-            "utf-8", errors="replace"
+            "utf-8",
+            errors="replace",
         ).strip()
 
     if not text:
@@ -130,6 +156,7 @@ def start_analysis():
         selected_length = "balanced"
 
     _clean_old_jobs()
+
     job_id = uuid.uuid4().hex
     now = time.time()
 
@@ -159,12 +186,16 @@ def start_analysis():
 
 @app.route("/progress/<job_id>", methods=["GET"])
 def job_progress(job_id):
+    """Return the current processing stage to the browser."""
     with _jobs_lock:
         job = _jobs.get(job_id)
 
         if not job:
             return jsonify(
-                error="This processing session expired. Please submit your text again."
+                error=(
+                    "This processing session expired. "
+                    "Please submit your text again."
+                )
             ), 404
 
         response = {
@@ -175,12 +206,14 @@ def job_progress(job_id):
 
         if job["status"] == "error":
             response["error"] = job.get(
-                "error", "An unexpected error occurred."
+                "error",
+                "An unexpected error occurred.",
             )
 
         if job["status"] == "done":
             response["result_url"] = url_for(
-                "show_result", job_id=job_id
+                "show_result",
+                job_id=job_id,
             )
 
         return jsonify(response)
@@ -188,6 +221,7 @@ def job_progress(job_id):
 
 @app.route("/result/<job_id>", methods=["GET"])
 def show_result(job_id):
+    """Display the completed summary and study notes."""
     with _jobs_lock:
         job = _jobs.get(job_id)
 
@@ -198,13 +232,70 @@ def show_result(job_id):
         result = job["result"]
         selected_length = job["selected_length"]
 
-    
+    return render_template(
+        "index.html",
+        input_text=input_text,
+        result=result,
+        error=None,
+        selected_length=selected_length,
+        result_job_id=job_id,
+    )
+
+
+@app.route("/download/<job_id>", methods=["GET"])
+def download_result(job_id):
+    """Download the completed summary and study notes."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+
+        if not job or job.get("status") != "done":
+            return redirect(url_for("index"))
+
+        result = job["result"]
+
+        lines = [
+            "CLARIFY - STUDY NOTES",
+            "",
+            "SUMMARY",
+            result.get("summary", ""),
+            "",
+            "KEY TERMS",
+        ]
+
+        for item in result.get("key_terms", []):
+            lines.append(f"- {item.get('term', '')}")
+
+            if item.get("context"):
+                lines.append(f"  Context: {item['context']}")
+
+        lines.extend(["", "DEFINITIONS"])
+
+        for item in result.get("definitions", []):
+            lines.append(
+                f"{item.get('term', '')}: "
+                f"{item.get('definition', '')}"
+            )
+
+        notes = "\n".join(lines)
+
+    return send_file(
+        BytesIO(notes.encode("utf-8")),
+        mimetype="text/plain",
+        as_attachment=True,
+        download_name="clarify-study-notes.txt",
+    )
+
 
 @app.route("/health", methods=["GET"])
 def health():
+    """Health check for Render."""
     return jsonify(status="ok", app="Clarify")
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+    )

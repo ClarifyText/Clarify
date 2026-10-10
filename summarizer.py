@@ -139,7 +139,7 @@ def summarize_text(text, length="balanced", progress_callback=None):
         return ""
 
     word_count = len(re.findall(r"\b\w+\b", text))
-    if word_count < 70:
+    if word_count < 350 or word_count > 500:
         _notify(progress_callback, "Short passage detected. Selecting useful complete sentences…", 72)
         return _extractive_summary(text, length)
 
